@@ -1,0 +1,1108 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Simulasi Pelunasan KPR</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='3' width='20' height='26' rx='4' fill='%23b0cfff' stroke='%2324253a' stroke-width='2'/%3E%3Crect x='10' y='7' width='12' height='6' rx='1.5' fill='%23e0609c'/%3E%3Cg fill='%2324253a'%3E%3Ccircle cx='11.5' cy='18' r='1.6'/%3E%3Ccircle cx='16' cy='18' r='1.6'/%3E%3Ccircle cx='20.5' cy='18' r='1.6'/%3E%3Ccircle cx='11.5' cy='23.5' r='1.6'/%3E%3Ccircle cx='16' cy='23.5' r='1.6'/%3E%3Ccircle cx='20.5' cy='23.5' r='1.6'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gabarito:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: dua kolom di layar lebar (input di kiri, hasil di kanan), satu kolom di ponsel.
+   Motif identitas: "pita tahun", deretan kotak per tahun tenor yang terisi sampai tahun lunas. */
+:root {
+  /* Palet dari pengguna: pink muda, biru muda, krem */
+  --bg: #f9f8f2;            /* krem pengguna: latar halaman */
+  --surface: #fffefb;       /* panel input dan kartu, sedikit lebih terang dari latar */
+  --ink: #24253a;           /* teks utama, navy keunguan agar selaras dengan pink dan biru */
+  --muted: #5c5e72;         /* teks sekunder */
+  --line: #e4e1d7;          /* garis batas */
+  --pink: #ffb0d9;          /* aksen: tombol utama dan pita skenario setor bulanan */
+  --pink-soft: #f9c9e2;     /* latar panel hasil utama */
+  --blue: #b0cfff;          /* pita skenario setor berkala */
+  --blue-soft: #c9dcf9;     /* pilihan aktif dan masa bunga fix */
+  --on-accent: #24253a;     /* teks di atas pink dan biru, tetap gelap di kedua tema */
+  --pink-ink: #a12d66;      /* teks aksen pink */
+  --strip-empty: #ebe8df;   /* kotak pita yang belum terpakai */
+  --strip-hero-empty: #fffefb; /* kotak kosong di atas panel pink */
+  --c-month: #c2407f;       /* garis grafik: setor tiap bulan */
+  --c-lump: #2f62b3;        /* garis grafik: nabung lalu setor berkala */
+  --c-normal: #7d8197;      /* garis grafik: pembayaran normal (putus-putus) */
+  --band: #c9dcf966;        /* arsiran masa bunga fix di grafik */
+  --hero-line: #a8467a;     /* garis pembatas dua skenario di panel pink */
+  --good: #17683f;          /* hemat bersih: hijau, status positif */
+  --danger: #a3243b;
+  --danger-soft: #fbe3e7;
+
+  --f-display: "Gabarito", "Trebuchet MS", system-ui, sans-serif;
+  --f-body: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+
+  --r-field: 10px;
+  --r-panel: 18px;
+  --r-chip: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16171f; --surface: #1f2029; --ink: #f2f0ea; --muted: #a9aabb; --line: #34353f;
+    --pink: #ffb0d9; --pink-soft: #3b2333; --blue: #b0cfff; --blue-soft: #243453;
+    --on-accent: #1b1c26; --pink-ink: #ffb0d9; --strip-empty: #2e2f3a; --strip-hero-empty: #24252f;
+    --c-month: #e0609c; --c-lump: #4f86e0; --c-normal: #8d91a8; --band: #243453aa;
+    --danger: #ff9aaa; --danger-soft: #3a1d24; --good: #7ed9a6; --hero-line: #c48aa9;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16171f; --surface: #1f2029; --ink: #f2f0ea; --muted: #a9aabb; --line: #34353f;
+  --pink: #ffb0d9; --pink-soft: #3b2333; --blue: #b0cfff; --blue-soft: #243453;
+  --on-accent: #1b1c26; --pink-ink: #ffb0d9; --strip-empty: #2e2f3a; --strip-hero-empty: #24252f;
+  --c-month: #e0609c; --c-lump: #4f86e0; --c-normal: #8d91a8; --band: #243453aa;
+  --danger: #ff9aaa; --danger-soft: #3a1d24; --good: #7ed9a6; --hero-line: #c48aa9;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-inline: 16px; padding-block: 0 96px;
+  -webkit-text-size-adjust: 100%;
+}
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; line-height: 1.15; text-wrap: balance; margin: 0; }
+p { margin: 0; }
+.num, td, .stat, input { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.wrap { max-width: 1180px; margin: 0 auto; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; padding-block: 28px 20px; }
+.top h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); font-weight: 700; letter-spacing: -0.01em; }
+.top p { color: var(--muted); max-width: 58ch; margin-top: 6px; }
+.top-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn {
+  font: 600 14px/1 var(--f-body); color: var(--ink);
+  min-height: 44px; padding: 0 16px; border-radius: var(--r-field);
+  border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+}
+.btn:hover { border-color: var(--muted); }
+.btn-icon { display: inline-flex; align-items: center; gap: 8px; }
+.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.ic-moon { fill: var(--blue-soft); }
+.ic-sun circle { fill: var(--pink); }
+.btn-icon[aria-pressed="false"] .ic-sun, .btn-icon[aria-pressed="true"] .ic-moon { display: none; }
+.btn-accent { background: var(--pink); border-color: var(--pink); color: var(--on-accent); }
+.btn-accent:hover { border-color: var(--on-accent); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 0 10px; }
+.btn-ghost:hover { color: var(--ink); border-color: var(--line); }
+
+/* Grid utama */
+.layout { display: grid; gap: 24px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 960px) {
+  .inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+}
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-panel); padding: 20px; min-width: 0; }
+.panel h2 { font-size: 1.25rem; }
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.hint { color: var(--muted); font-size: 13px; }
+
+/* Form */
+.inputs { display: grid; gap: 20px; padding: 0; border: 0; background: none; }
+.inputs .panel { display: flex; flex-direction: column; }
+
+/* Pemilih bulan: tahun dulu, lalu bulan */
+.picker-anchor { position: relative; }
+.picker-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; padding: 0 12px; font: 500 15px var(--f-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-field); cursor: pointer; text-align: left; }
+.picker-btn:hover { border-color: var(--muted); }
+.picker-btn .ic { color: var(--muted); }
+.picker-pop { position: absolute; z-index: 10; top: calc(100% + 6px); left: 0; width: min(300px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 12px 32px rgba(36, 37, 58, 0.14); }
+.pop-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.pop-title { font-family: var(--f-display); font-weight: 600; font-size: 1.05rem; flex: 1; text-align: center; }
+.pop-nav, .pop-back { min-width: 44px; min-height: 44px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--r-field); cursor: pointer; font: 600 20px/1 var(--f-body); }
+.pop-back { font-size: 13.5px; padding: 0 12px; }
+.pop-nav:hover, .pop-back:hover { border-color: var(--muted); }
+.pop-nav[hidden], .pop-back[hidden] { display: none; }
+.pop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pop-grid button { min-height: 44px; border: 1px solid transparent; background: var(--bg); color: var(--ink); border-radius: var(--r-field); font: 500 14.5px var(--f-body); cursor: pointer; }
+.pop-grid button:hover { border-color: var(--muted); }
+.pop-grid button[aria-current="true"] { background: var(--blue-soft); font-weight: 700; }
+.fields { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.field { display: grid; gap: 4px; min-width: 0; align-content: start; }
+.field.full { grid-column: 1 / -1; }
+.field label { font-size: 13px; font-weight: 600; }
+.field .help { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.help-row { grid-column: 1 / -1; margin-top: -8px; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.field .err { font-size: 12.5px; color: var(--danger); line-height: 1.4; }
+.control { position: relative; display: flex; align-items: center; }
+.control .pre, .control .suf { position: absolute; font-size: 14px; color: var(--muted); pointer-events: none; }
+.control .pre { left: 12px; }
+.control .suf { right: 12px; }
+input[type="text"], input[type="number"], input[type="month"], select {
+  width: 100%; min-height: 44px; padding: 0 12px; font: 500 15px var(--f-body); color: var(--ink);
+  background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-field);
+  appearance: none; -webkit-appearance: none; -moz-appearance: textfield;
+}
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.control .pre + input { padding-left: 38px; }
+.control input.has-suf { padding-right: 84px; }
+select { background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 18px) 19px, calc(100% - 13px) 19px; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 32px; }
+input:hover, select:hover { border-color: var(--muted); }
+input[aria-invalid="true"] { border-color: var(--danger); }
+
+.readout { display: grid; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.readout div { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.readout dt { color: var(--muted); }
+.readout dd { margin: 0; font-weight: 600; text-align: right; white-space: nowrap; }
+
+/* Segmented (radio) */
+.seg { position: relative; display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
+.seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.seg label { display: inline-flex; align-items: center; min-height: 38px; padding: 0 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.seg input:checked + label { background: var(--blue-soft); color: var(--ink); }
+.seg input:focus-visible + label { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* Hasil */
+.results { display: grid; gap: 20px; min-width: 0; grid-template-columns: minmax(0, 1fr); }
+.status { font-size: 13px; color: var(--muted); min-height: 20px; }
+.status[data-busy="true"] { color: var(--ink); }
+
+.hero { background: var(--pink-soft); border-radius: var(--r-panel); padding: clamp(20px, 3vw, 32px); display: grid; gap: 18px; }
+.hero-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.hero-col { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.hero-col + .hero-col { border-top: 2px solid var(--hero-line); padding-top: 20px; }
+@media (min-width: 760px) {
+  .hero-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+  .hero-col + .hero-col { border-top: 0; padding-top: 0; border-left: 2px solid var(--hero-line); padding-left: 32px; }
+}
+.hero-name { font-size: 1.15rem; display: flex; align-items: center; }
+.hero .how { font-size: 13.5px; color: var(--ink); opacity: 0.85; }
+.hero .lead { font-size: 15px; }
+.hero .big { font-family: var(--f-display); font-weight: 700; font-size: clamp(2.4rem, 6vw, 3.8rem); line-height: 1; letter-spacing: -0.02em; }
+.hero .big small { font-size: 0.42em; font-weight: 600; letter-spacing: 0; }
+.hero .sub { font-size: 15.5px; max-width: 60ch; }
+.hero .sub strong { font-weight: 700; }
+
+/* Pita tahun (motif) */
+.strip { display: grid; grid-template-columns: repeat(var(--years), minmax(0, 1fr)); gap: 3px; max-width: 520px; }
+.hero .strip, .hero .strip-scale { max-width: none; }
+.strip i { display: block; height: 14px; border-radius: var(--r-chip); background: var(--strip-empty); overflow: hidden; position: relative; }
+.strip i b { position: absolute; inset: 0 auto 0 0; width: var(--fill, 0%); background: var(--strip-color, var(--c-month)); }
+.hero .strip i { background: var(--strip-hero-empty); }
+.strip.sm i { height: 9px; }
+.strip-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); max-width: 520px; margin-top: 4px; }
+
+/* Tabel perbandingan skenario */
+.tablewrap { position: relative; overflow-x: auto; min-width: 0; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-weight: 600; font-size: 12.5px; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
+td.r, th.r { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+.sw { display: inline-block; width: 18px; height: 0; border-top: 3px solid var(--c); vertical-align: middle; margin-right: 8px; }
+.sw.dash { border-top-style: dashed; }
+.scen-name { font-weight: 600; }
+.good { color: var(--good); font-weight: 700; }
+.table-note { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+
+/* Grafik */
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; margin-bottom: 8px; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.chart text { font-family: var(--f-body); font-size: 11.5px; fill: var(--muted); }
+.chart .lbl { font-weight: 600; fill: var(--ink); }
+.tip { position: absolute; top: 8px; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; min-width: 190px; }
+.tip div { display: flex; justify-content: space-between; gap: 12px; }
+.tip strong { display: block; margin-bottom: 2px; }
+
+/* Dua alat */
+.tools { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) { .tools { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); } }
+.target-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 15px; }
+.target-row input { width: 84px; text-align: center; }
+.answers { display: grid; gap: 10px; margin-top: 14px; }
+.answer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.answer .k { font-size: 13px; color: var(--muted); }
+.answer .v { font-family: var(--f-display); font-size: 1.45rem; font-weight: 600; white-space: nowrap; }
+.answer .btn { grid-row: 1 / span 2; grid-column: 2; }
+.answer .note { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); }
+.msg { font-size: 13.5px; padding: 10px 12px; border-radius: var(--r-field); background: var(--bg); border: 1px solid var(--line); }
+.msg.error { background: var(--danger-soft); border-color: transparent; color: var(--danger); }
+
+.cmp td input { width: 136px; min-height: 40px; }
+.cmp .strip { min-width: 120px; }
+.icon-btn { min-width: 44px; min-height: 44px; border: 1px solid transparent; background: transparent; border-radius: var(--r-field); color: var(--muted); cursor: pointer; font: 600 18px/1 var(--f-body); }
+.icon-btn:hover { border-color: var(--line); color: var(--ink); }
+.icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.cmp-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; }
+
+/* Tabel angsuran */
+details.year { border-top: 1px solid var(--line); }
+details.year:first-of-type { border-top: 0; }
+details.year summary { list-style: none; display: grid; grid-template-columns: 16px auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px 4px; cursor: pointer; min-height: 52px; }
+details.year summary::-webkit-details-marker { display: none; }
+details.year summary::before { content: "+"; font: 600 18px/1 var(--f-body); color: var(--muted); width: 16px; }
+details.year[open] summary::before { content: "\2212"; }
+.y-title { font-weight: 600; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: var(--r-chip); background: var(--blue-soft); color: var(--ink); }
+.chip.float { background: var(--pink-soft); }
+.y-meta { font-size: 13px; color: var(--muted); text-align: right; }
+details.year .tablewrap { padding-bottom: 12px; }
+details.year table { font-size: 13.5px; }
+tr.sub td { font-weight: 700; background: var(--bg); }
+td.extra { color: var(--pink-ink); font-weight: 600; }
+
+.empty-state { text-align: left; padding: 28px; border: 1px dashed var(--line); border-radius: var(--r-panel); display: grid; gap: 8px; }
+.empty-state h2 { font-size: 1.3rem; }
+.empty-state.error { border-color: var(--danger); background: var(--danger-soft); }
+.empty-state.error h2, .empty-state.error p { color: var(--danger); }
+
+.notes { font-size: 13.5px; color: var(--muted); }
+.notes h2 { color: var(--ink); }
+.notes ul { margin: 10px 0 0; padding-left: 18px; display: grid; gap: 6px; }
+
+/* Bilah ringkas di ponsel */
+.mbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.mbar p { font-size: 13.5px; line-height: 1.35; min-width: 0; }
+.mbar strong { font-family: var(--f-display); font-size: 1.05rem; }
+.mbar a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: var(--r-field); background: var(--pink); color: var(--on-accent); font-weight: 600; font-size: 14px; text-decoration: none; }
+@media (min-width: 960px) { .mbar { display: none; } body { padding-block-end: 48px; } }
+
+@media (max-width: 560px) {
+  table.stack thead { display: none; }
+  table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; width: 100%; }
+  table.stack tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  table.stack tr:last-child { border-bottom: 0; }
+  table.stack td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; white-space: normal; text-align: right; }
+  table.stack td::before { content: attr(data-l); color: var(--muted); font-size: 13px; text-align: left; flex: none; }
+  table.stack td.lead-cell { justify-content: flex-start; text-align: left; padding-bottom: 6px; }
+  table.stack td.lead-cell::before, table.stack td.del::before { content: none; }
+  table.stack tr { position: relative; }
+  table.stack td.del { position: absolute; top: 10px; right: 0; width: auto; padding: 0; }
+  .cmp td.lead-cell { padding-right: 52px; }
+  table.stack .cellv { display: grid; justify-items: end; gap: 4px; }
+  table.stack .cellv .strip { width: 140px; }
+  .cmp td input { width: 100%; }
+  .cmp td.lead-cell .control { flex: 1; }
+}
+@media (max-width: 520px) {
+  .fields { grid-template-columns: minmax(0, 1fr); }
+  .seg { display: flex; }
+  .seg label { flex: 1 1 auto; justify-content: center; text-align: center; }
+  .answer .btn { grid-row: auto; grid-column: 1 / -1; justify-self: start; }
+  .panel { padding: 16px; }
+  .y-meta { grid-column: 2 / -1; text-align: left; }
+  details.year summary > span:nth-of-type(2) { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .icon-btn, .seg label, input, select { transition: border-color .15s, background-color .15s, color .15s; }
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Simulasi Pelunasan KPR</h1>
+    <div class="top-actions">
+      <button class="btn btn-icon" id="themeBtn" type="button" aria-pressed="false">
+        <svg class="ic ic-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z"/></svg>
+        <svg class="ic ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+        <span id="themeText">Mode Gelap</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <form class="inputs" id="form" novalidate>
+      <section class="panel" aria-labelledby="h-pinjaman">
+        <div class="panel-head">
+          <h2 id="h-pinjaman">Rincian Angsuran</h2>
+        </div>
+        <div class="fields">
+          <div class="field full">
+            <label for="price">Harga Properti</label>
+            <div class="control"><span class="pre">Rp</span><input id="price" type="text" inputmode="numeric" data-money autocomplete="off" aria-describedby="price-err"></div>
+            <p class="err" id="price-err" hidden></p>
+          </div>
+          <div class="field">
+            <label for="dp">Uang Muka</label>
+            <div class="control"><input id="dp" class="has-suf" type="text" inputmode="decimal" autocomplete="off" aria-describedby="dp-help dp-err"><span class="suf">%</span></div>
+            <p class="help" id="dp-help"></p>
+            <p class="err" id="dp-err" hidden></p>
+          </div>
+          <div class="field">
+            <label for="tenor">Tenor</label>
+            <div class="control"><input id="tenor" class="has-suf" type="number" inputmode="numeric" min="1" max="30" step="1" aria-describedby="tenor-err"><span class="suf">tahun</span></div>
+            <p class="err" id="tenor-err" hidden></p>
+          </div>
+          <div class="field">
+            <label for="fixRate">Bunga Fix</label>
+            <div class="control"><input id="fixRate" class="has-suf" type="text" inputmode="decimal" autocomplete="off" aria-describedby="fixRate-err"><span class="suf">% / tahun</span></div>
+            <p class="err" id="fixRate-err" hidden></p>
+          </div>
+          <div class="field">
+            <label for="fixYears">Masa Bunga Fix</label>
+            <div class="control"><input id="fixYears" class="has-suf" type="number" inputmode="numeric" min="0" max="30" step="1" aria-describedby="fixYears-err"><span class="suf">tahun</span></div>
+            <p class="err" id="fixYears-err" hidden></p>
+          </div>
+          <div class="field">
+            <label for="floatRate">Bunga Floating</label>
+            <div class="control"><input id="floatRate" class="has-suf" type="text" inputmode="decimal" autocomplete="off" aria-describedby="floatRate-err"><span class="suf">% / tahun</span></div>
+            <p class="err" id="floatRate-err" hidden></p>
+          </div>
+          <div class="field picker" id="picker">
+            <label for="startDate" id="startDate-label">Cicilan Pertama</label>
+            <div class="picker-anchor">
+            <button type="button" id="startDate" class="picker-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="pickerPop">
+              <span id="startDateText"></span>
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+            </button>
+            <div class="picker-pop" id="pickerPop" role="dialog" aria-modal="false" aria-labelledby="pickerTitle" hidden>
+              <div class="pop-head">
+                <button type="button" class="pop-nav" id="popPrev" aria-label="12 tahun sebelumnya">&lsaquo;</button>
+                <button type="button" class="pop-back" id="popBack" hidden>Ganti Tahun</button>
+                <p class="pop-title" id="pickerTitle">Pilih Tahun</p>
+                <button type="button" class="pop-nav" id="popNext" aria-label="12 tahun berikutnya">&rsaquo;</button>
+              </div>
+              <div class="pop-grid" id="popGrid"></div>
+            </div>
+            </div>
+          </div>
+        </div>
+        <dl class="readout" id="loanReadout"></dl>
+      </section>
+
+      <section class="panel" aria-labelledby="h-rencana">
+        <div class="panel-head"><h2 id="h-rencana">Rencana Bayar</h2></div>
+        <div class="fields">
+          <div class="field full">
+            <label for="budget">Total Bayar Per Bulan</label>
+            <div class="control"><span class="pre">Rp</span><input id="budget" type="text" inputmode="numeric" data-money autocomplete="off" aria-describedby="budget-help budget-err"></div>
+            <p class="help" id="budget-help"></p>
+            <p class="err" id="budget-err" hidden></p>
+          </div>
+          <div class="field">
+            <label for="startMonth">Mulai Bayar Ekstra Di Bulan Ke</label>
+            <div class="control"><input id="startMonth" type="number" inputmode="numeric" min="1" step="1" aria-describedby="startMonth-help startMonth-err"></div>
+            <p class="help" id="startMonth-help">Isi 1 kalau mulai dari cicilan pertama.</p>
+            <p class="err" id="startMonth-err" hidden></p>
+          </div>
+          <div class="field">
+            <label for="penalty">Penalti Pelunasan</label>
+            <div class="control"><input id="penalty" class="has-suf" type="text" inputmode="decimal" autocomplete="off" aria-describedby="penalty-help penalty-err"><span class="suf">%</span></div>
+            <p class="help" id="penalty-help">Dari uang yang disetor ke pokok. Isi sesuai ketentuan bank, atau 0.</p>
+            <p class="err" id="penalty-err" hidden></p>
+          </div>
+          <div class="field full">
+            <label for="every">Periode Bayar Ekstra</label>
+            <select id="every">
+              <option value="3">Setiap 3 Bulan</option>
+              <option value="6">Setiap 6 Bulan</option>
+              <option value="12">Setiap 12 Bulan</option>
+              <option value="24">Setiap 24 Bulan</option>
+            </select>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <main class="results" id="hasil" aria-labelledby="h-hasil" tabindex="-1">
+      <h2 id="h-hasil" class="sr">Hasil Simulasi</h2>
+      <p class="status" id="status" role="status" aria-live="polite"></p>
+      <div id="stateBox" hidden></div>
+      <div id="resultBody" class="results">
+        <section class="hero" aria-labelledby="heroLead">
+          <p class="lead" id="heroLead"></p>
+          <div class="hero-cols">
+            <div class="hero-col" id="heroMonthly"></div>
+            <div class="hero-col" id="heroLump"></div>
+          </div>
+        </section>
+
+        <section class="panel" aria-labelledby="h-banding">
+          <div class="panel-head"><h2 id="h-banding">Perbandingan Skenario</h2><span class="hint" id="cmpHint"></span></div>
+          <div class="tablewrap">
+            <table class="stack">
+              <thead><tr><th>Skenario</th><th>Durasi Pelunasan</th><th>Perkiraan Lunas</th><th class="r">Total Bunga</th><th class="r">Penalti</th><th class="r">Total Pembayaran</th><th class="r">Hemat Berapa?</th></tr></thead>
+              <tbody id="scenTable"></tbody>
+            </table>
+          </div>
+          <p class="hint table-note" id="totalNote"></p>
+        </section>
+
+        <section class="panel" aria-labelledby="h-grafik">
+          <div class="panel-head"><h2 id="h-grafik">Sisa Pinjaman Dari Waktu Ke Waktu</h2><span class="hint">Geser atau sentuh grafik untuk melihat angka per bulan.</span></div>
+          <div class="legend" id="legend"></div>
+          <div class="chart" id="chart"></div>
+        </section>
+
+        <div class="tools">
+          <section class="panel" aria-labelledby="h-mundur">
+            <div class="panel-head"><h2 id="h-mundur">Hitung Mundur</h2></div>
+            <div class="target-row">
+              <label for="targetYears">Kita mau lunas dalam</label>
+              <input id="targetYears" type="number" inputmode="decimal" min="1" step="0.5" aria-describedby="target-out">
+              <span>tahun</span>
+            </div>
+            <div class="answers" id="target-out" aria-live="polite"></div>
+          </section>
+
+          <section class="panel" aria-labelledby="h-nominal">
+            <div class="panel-head"><h2 id="h-nominal">Bandingkan Nominal</h2><span class="hint">Maksimal 5 nominal</span></div>
+            <div class="tablewrap">
+              <table class="cmp stack">
+                <thead><tr><th>Bayar Per Bulan</th><th>Bayar Ekstra Setiap Bulan</th><th id="cmpLumpHead">Bayar Ekstra Setiap 12 Bulan</th><th class="r">Hemat Berapa?</th><th><span class="sr">Hapus</span></th></tr></thead>
+                <tbody id="cmpBody"></tbody>
+              </table>
+            </div>
+            <div class="cmp-actions">
+              <button class="btn" type="button" id="addNominal">Tambah Nominal</button>
+              <span class="hint">Kolom Hemat Berapa? memakai skenario Bayar Ekstra Setiap Bulan.</span>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel" aria-labelledby="h-tabel">
+          <div class="panel-head">
+            <h2 id="h-tabel">Tabel Angsuran</h2>
+            <div class="seg" role="radiogroup" aria-label="Skenario tabel">
+              <input type="radio" name="tbl" id="t-normal" value="normal"><label for="t-normal">Pembayaran Normal</label>
+              <input type="radio" name="tbl" id="t-monthly" value="monthly" checked><label for="t-monthly">Bayar Ekstra Setiap Bulan</label>
+              <input type="radio" name="tbl" id="t-lump" value="lump"><label for="t-lump" id="t-lump-label">Bayar Ekstra Setiap 12 Bulan</label>
+            </div>
+          </div>
+          <div class="cmp-actions" style="margin:0 0 8px">
+            <button class="btn btn-ghost" type="button" id="expandAll">Buka Semua Tahun</button>
+            <button class="btn btn-ghost" type="button" id="collapseAll">Tutup Semua</button>
+          </div>
+          <div id="yearTables"></div>
+        </section>
+      </div>
+
+      <section class="panel notes" aria-labelledby="h-catatan">
+        <h2 id="h-catatan">Catatan Perhitungan</h2>
+        <ul>
+          <li>Perhitungan ini hanya estimasi. Perhitungan dari bank bisa berbeda karena pembulatan, asuransi, dan biaya lain.</li>
+          <li>Setelah bayar ekstra, angsuran wajib tetap sama dan tenornya yang berkurang. Bank bisa saja menghitung ulang angsuran saat bunga floating mulai berlaku.</li>
+          <li>Bank biasanya punya aturan minimal setoran, frekuensi, dan penalti untuk pelunasan sebagian. Tanyakan ke bank terkait perihal hal ini.</li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="mbar" id="mbar" aria-hidden="false">
+  <p id="mbarText"></p>
+  <a href="#hasil" id="mbarLink">Lihat Hasil</a>
+</div>
+
+<script>
+/* ---------- Mesin hitung ---------- */
+function annuity(P, r, n) {
+  if (n <= 0) return P;
+  if (r === 0) return P / n;
+  return P * r / (1 - Math.pow(1 + r, -n));
+}
+function wajibSchedule(L) {
+  const n = L.tenor * 12, F = Math.min(L.fixYears * 12, n);
+  const rF = L.fixRate / 1200, rV = L.floatRate / 1200;
+  const a1 = annuity(L.principal, rF, n);
+  let b = L.principal;
+  for (let m = 1; m <= F; m++) b -= a1 - b * rF;
+  const a2 = F < n ? annuity(Math.max(b, 0), rV, n - F) : a1;
+  return { n, F, a1, a2, rF, rV };
+}
+function simulate(L, mode, plan) {
+  const s = wajibSchedule(L);
+  const p = (plan && plan.penalty ? plan.penalty : 0) / 100;
+  const start = plan && plan.startMonth ? plan.startMonth : 1;
+  const every = plan && plan.every ? plan.every : 12;
+  let b = L.principal, saved = 0;
+  const rows = [];
+  let totInt = 0, totPen = 0, totPaid = 0, totExtra = 0;
+  for (let m = 1; m <= s.n && b > 0.005; m++) {
+    const fix = m <= s.F;
+    const r = fix ? s.rF : s.rV;
+    const wajib = fix ? s.a1 : s.a2;
+    const interest = b * r;
+    const pay = Math.min(wajib, b + interest);
+    const principalPart = pay - interest;
+    b -= principalPart;
+    let extra = 0, pen = 0;
+    const active = mode !== 'normal' && m >= start && b > 0.005;
+    if (active) {
+      const spare = Math.max(0, plan.budget - wajib);
+      if (mode === 'monthly') {
+        extra = Math.min(spare / (1 + p), b);
+      } else {
+        saved += spare;
+        const sinceStart = m - start + 1;
+        if (saved >= b * (1 + p) || sinceStart % every === 0) extra = Math.min(saved / (1 + p), b);
+      }
+      if (extra > 0) {
+        pen = extra * p;
+        if (mode === 'lump') saved -= extra + pen;
+        b -= extra;
+      }
+    }
+    if (b < 0.005) b = 0;
+    totInt += interest; totPen += pen; totExtra += extra;
+    totPaid += pay + extra + pen;
+    rows.push({ m, fix, rate: fix ? L.fixRate : L.floatRate, pay, principal: principalPart, interest, extra, pen, balance: b, saved: mode === 'lump' ? Math.max(0, saved) : 0 });
+  }
+  return { rows, months: rows.length, totInt, totPen, totPaid, totExtra, leftover: mode === 'lump' ? Math.max(0, saved) : 0, sched: s };
+}
+function solveBudget(L, mode, plan, targetMonths) {
+  const s = wajibSchedule(L);
+  if (targetMonths >= s.n) return { budget: Math.max(s.a1, s.a2), already: true };
+  let lo = Math.min(s.a1, s.a2), hi = L.principal * 1.2 + Math.max(s.a1, s.a2);
+  if (simulate(L, mode, Object.assign({}, plan, { budget: hi })).months > targetMonths) return null;
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (simulate(L, mode, Object.assign({}, plan, { budget: mid })).months <= targetMonths) hi = mid; else lo = mid;
+  }
+  return { budget: Math.ceil(hi / 1000) * 1000, already: false };
+}
+
+/* ---------- Format ---------- */
+const nf = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 });
+const fmt = n => nf.format(Math.round(n));
+const rp = n => 'Rp' + fmt(n);
+function short(n) {
+  const a = Math.abs(n), sign = n < 0 ? '-' : '';
+  if (a >= 1e9) return sign + 'Rp' + nf1.format(a / 1e9) + ' M';
+  if (a >= 1e6) return sign + 'Rp' + nf1.format(a / 1e6) + ' jt';
+  return sign + rp(a);
+}
+function dur(m) {
+  const y = Math.floor(m / 12), mo = m % 12;
+  if (!y) return mo + ' bulan';
+  if (!mo) return y + ' tahun';
+  return y + ' tahun ' + mo + ' bulan';
+}
+const MONTHS = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function dateOf(m) {
+  const sd = state.startDate;
+  if (!sd) return 'bulan ke-' + m;
+  const t = sd.y * 12 + sd.m + (m - 1);
+  return MONTHS[t % 12] + ' ' + Math.floor(t / 12);
+}
+const digits = s => (s || '').replace(/\D/g, '');
+const parseMoney = s => { const d = digits(s); return d === '' ? NaN : Number(d); };
+const parseDec = s => { const t = (s || '').trim().replace(',', '.'); return t === '' || isNaN(Number(t)) ? NaN : Number(t); };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------- State ---------- */
+const DEFAULTS = { price: 400000000, dpPct: 10, tenor: 15, fixYears: 5, fixRate: 3.4, floatRate: 12, budget: 5000000, startMonth: 1, penalty: 0, every: 12, targetYears: 7, nominals: [4000000, 5000000, 6000000] };
+const state = { focus: 'monthly', tbl: 'monthly', openYears: new Set(), nominals: DEFAULTS.nominals.slice(), startDate: null };
+const $ = id => document.getElementById(id);
+
+function nextMonth() {
+  const d = new Date();
+  const t = d.getFullYear() * 12 + d.getMonth() + 1;
+  return { y: Math.floor(t / 12), m: t % 12 };
+}
+const MONTHS_FULL = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+function syncPickerText() {
+  const d = state.startDate;
+  $('startDateText').textContent = d ? MONTHS_FULL[d.m] + ' ' + d.y : 'Pilih bulan';
+}
+
+/* Pemilih bulan: langkah 1 tahun, langkah 2 bulan */
+const picker = { view: 'year', pageStart: 0, year: 0 };
+function openPicker() {
+  const d = state.startDate || nextMonth();
+  picker.view = 'year'; picker.year = d.y; picker.pageStart = d.y - 4;
+  renderPicker();
+  $('pickerPop').hidden = false;
+  $('startDate').setAttribute('aria-expanded', 'true');
+  const cur = $('popGrid').querySelector('[aria-current="true"]') || $('popGrid').querySelector('button');
+  if (cur) cur.focus();
+}
+function closePicker(refocus) {
+  if ($('pickerPop').hidden) return;
+  $('pickerPop').hidden = true;
+  $('startDate').setAttribute('aria-expanded', 'false');
+  if (refocus) $('startDate').focus();
+}
+function renderPicker() {
+  const d = state.startDate;
+  const grid = $('popGrid');
+  if (picker.view === 'year') {
+    $('pickerTitle').textContent = 'Pilih Tahun';
+    $('popPrev').hidden = false; $('popNext').hidden = false; $('popBack').hidden = true;
+    let h = '';
+    for (let y = picker.pageStart; y < picker.pageStart + 12; y++) {
+      h += '<button type="button" data-year="' + y + '"' + (d && d.y === y ? ' aria-current="true"' : '') + '>' + y + '</button>';
+    }
+    grid.innerHTML = h;
+  } else {
+    $('pickerTitle').textContent = 'Pilih Bulan ' + picker.year;
+    $('popPrev').hidden = true; $('popNext').hidden = true; $('popBack').hidden = false;
+    grid.innerHTML = MONTHS.map((m, i) => '<button type="button" data-month="' + i + '" aria-label="' + MONTHS_FULL[i] + ' ' + picker.year + '"' + (d && d.y === picker.year && d.m === i ? ' aria-current="true"' : '') + '>' + m + '</button>').join('');
+  }
+}
+function fillDefaults() {
+  $('price').value = fmt(DEFAULTS.price);
+  $('dp').value = String(DEFAULTS.dpPct).replace('.', ',');
+  $('tenor').value = DEFAULTS.tenor;
+  $('fixYears').value = DEFAULTS.fixYears;
+  $('fixRate').value = String(DEFAULTS.fixRate).replace('.', ',');
+  $('floatRate').value = String(DEFAULTS.floatRate).replace('.', ',');
+  $('budget').value = fmt(DEFAULTS.budget);
+  $('startMonth').value = DEFAULTS.startMonth;
+  $('penalty').value = String(DEFAULTS.penalty);
+  $('every').value = String(DEFAULTS.every);
+  $('targetYears').value = DEFAULTS.targetYears;
+  state.startDate = nextMonth();
+  syncPickerText();
+  state.nominals = DEFAULTS.nominals.slice();
+  state.openYears = new Set();
+}
+
+/* Format rupiah sambil mengetik, posisi kursor dijaga */
+function liveMoney(el) {
+  const caret = el.selectionStart || 0;
+  const before = digits(el.value.slice(0, caret)).length;
+  const d = digits(el.value).replace(/^0+(?=\d)/, '');
+  el.value = d ? fmt(Number(d)) : '';
+  let pos = 0, seen = 0;
+  while (pos < el.value.length && seen < before) { if (/\d/.test(el.value[pos])) seen++; pos++; }
+  try { el.setSelectionRange(pos, pos); } catch (e) {}
+}
+
+/* ---------- Validasi ---------- */
+function setErr(id, msg) {
+  const e = $(id + '-err'), inp = $(id);
+  if (msg) { e.textContent = msg; e.hidden = false; inp.setAttribute('aria-invalid', 'true'); }
+  else { e.textContent = ''; e.hidden = true; inp.removeAttribute('aria-invalid'); }
+}
+function readInputs() {
+  const v = {
+    price: parseMoney($('price').value), dpPct: parseDec($('dp').value),
+    tenor: Number($('tenor').value), fixYears: Number($('fixYears').value),
+    fixRate: parseDec($('fixRate').value), floatRate: parseDec($('floatRate').value),
+    budget: parseMoney($('budget').value), startMonth: Number($('startMonth').value),
+    penalty: parseDec($('penalty').value), every: Number($('every').value)
+  };
+
+  const required = ['price', 'dp', 'tenor', 'fixYears', 'fixRate', 'floatRate', 'budget'];
+  const blank = required.filter(k => $(k).value.trim() === '');
+  const errs = {};
+  if (!blank.includes('price') && !(v.price > 0)) errs.price = 'Harga properti harus lebih dari 0.';
+  if (!blank.includes('dp') && !(v.dpPct >= 0 && v.dpPct < 100)) errs.dp = 'Isi 0 sampai kurang dari 100%.';
+  v.dp = v.price > 0 && v.dpPct >= 0 ? Math.round(v.price * v.dpPct / 100) : NaN;
+  if (!blank.includes('tenor') && !(Number.isInteger(v.tenor) && v.tenor >= 1 && v.tenor <= 30)) errs.tenor = 'Isi 1 sampai 30 tahun.';
+  if (!blank.includes('fixYears') && !(Number.isInteger(v.fixYears) && v.fixYears >= 0)) errs.fixYears = 'Isi angka bulat, 0 atau lebih.';
+  else if (!blank.includes('fixYears') && !errs.tenor && v.fixYears > v.tenor) errs.fixYears = 'Tidak boleh lebih lama dari tenor.';
+  if (!blank.includes('fixRate') && !(v.fixRate >= 0 && v.fixRate <= 30)) errs.fixRate = 'Isi 0 sampai 30.';
+  if (!blank.includes('floatRate') && !(v.floatRate >= 0 && v.floatRate <= 30)) errs.floatRate = 'Isi 0 sampai 30.';
+  if (!blank.includes('budget') && !(v.budget > 0)) errs.budget = 'Isi nominal lebih dari 0.';
+  if ($('startMonth').value.trim() !== '' && !(Number.isInteger(v.startMonth) && v.startMonth >= 1 && (!(v.tenor > 0) || v.startMonth <= v.tenor * 12))) errs.startMonth = 'Isi bulan ke-1 sampai akhir tenor.';
+  if ($('penalty').value.trim() !== '' && !(v.penalty >= 0 && v.penalty <= 20)) errs.penalty = 'Isi 0 sampai 20.';
+  ['price', 'dp', 'tenor', 'fixYears', 'fixRate', 'floatRate', 'budget', 'startMonth', 'penalty'].forEach(k => setErr(k, errs[k]));
+  if ($('startMonth').value.trim() === '') v.startMonth = 1;
+  if ($('penalty').value.trim() === '') v.penalty = 0;
+  return { v, blank, errs };
+}
+
+/* ---------- Render ---------- */
+const SCEN = {
+  normal: { name: 'Pembayaran Normal', color: 'var(--c-normal)', strip: 'var(--c-normal)', dash: true },
+  monthly: { name: 'Bayar Ekstra Setiap Bulan', color: 'var(--c-month)', strip: 'var(--c-month)' },
+  lump: { name: 'Setor Berkala', color: 'var(--c-lump)', strip: 'var(--c-lump)' }
+};
+function lumpName(every) { return 'Bayar Ekstra Setiap ' + every + ' Bulan'; }
+
+function stripHTML(months, tenor, color, sm) {
+  let h = '';
+  for (let y = 0; y < tenor; y++) {
+    const f = Math.max(0, Math.min(1, (months - y * 12) / 12));
+    h += '<i><b style="--fill:' + (f * 100).toFixed(1) + '%"></b></i>';
+  }
+  return '<div class="strip' + (sm ? ' sm' : '') + '" style="--years:' + tenor + ';--strip-color:' + color + '" aria-hidden="true">' + h + '</div>';
+}
+
+let R = null; // hasil terakhir
+
+function compute() {
+  const { v, blank, errs } = readInputs();
+  const box = $('stateBox'), body = $('resultBody');
+  if (blank.length) {
+    box.className = 'empty-state'; box.hidden = false; body.hidden = true;
+    box.innerHTML = '<h2>Lengkapi data untuk melihat hasil</h2><p>Masih kosong: ' + blank.map(k => esc(labelOf(k))).join(', ') + '.</p>';
+    $('mbarText').textContent = 'Lengkapi data pinjaman dulu.';
+    R = null; return;
+  }
+  if (Object.keys(errs).length) {
+    box.className = 'empty-state error'; box.hidden = false; body.hidden = true;
+    box.innerHTML = '<h2>Ada isian yang perlu diperbaiki</h2><p>' + Object.keys(errs).map(k => esc(labelOf(k) + ': ' + errs[k])).join('<br>') + '</p>';
+    $('mbarText').textContent = 'Ada isian yang perlu diperbaiki.';
+    R = null; return;
+  }
+  box.hidden = true; body.hidden = false;
+
+  const L = { principal: v.price - v.dp, tenor: v.tenor, fixYears: v.fixYears, fixRate: v.fixRate, floatRate: v.floatRate };
+  const plan = { budget: v.budget, startMonth: v.startMonth, penalty: v.penalty, every: v.every };
+  const res = { normal: simulate(L, 'normal'), monthly: simulate(L, 'monthly', plan), lump: simulate(L, 'lump', plan) };
+  R = { v, L, plan, res, sched: res.normal.sched };
+
+  renderReadout(); renderBudgetHelp(); renderHero(); renderScenTable(); renderChart(); renderTarget(); renderCompare(); renderYears();
+}
+function labelOf(k) {
+  return ({ price: 'Harga Properti', dp: 'Uang Muka', tenor: 'Tenor', fixYears: 'Masa Bunga Fix', fixRate: 'Bunga Fix', floatRate: 'Bunga Floating', budget: 'Total Bayar Per Bulan', startMonth: 'Mulai Bayar Ekstra', penalty: 'Penalti Pelunasan' })[k];
+}
+
+function renderReadout() {
+  const { v, L, sched } = R;
+  const hasFloat = sched.F < sched.n;
+  $('dp-help').textContent = 'Senilai ' + rp(v.dp);
+  $('loanReadout').innerHTML =
+    '<div><dt>Pokok Pinjaman</dt><dd>' + rp(L.principal) + '</dd></div>' +
+    '<div><dt>Angsuran Masa Fix' + (sched.F ? ' (Tahun ke-1 sampai ' + v.fixYears + ')' : '') + '</dt><dd>' + (sched.F ? rp(sched.a1) : 'tidak ada') + '</dd></div>' +
+    (hasFloat ? '<div><dt>Angsuran Masa Floating</dt><dd>' + rp(sched.a2) + '</dd></div>' : '') +
+    '<div><dt>Pembayaran Pertama (DP + Angsuran Pertama)</dt><dd>' + rp(v.dp + (sched.F ? sched.a1 : sched.a2)) + '</dd></div>';
+}
+
+function renderBudgetHelp() {
+  const { v, sched } = R;
+  const parts = [];
+  const hasFix = sched.F > 0, hasFloat = sched.F < sched.n;
+  if (hasFix) parts.push(extraText(v.budget - sched.a1, 'masa fix'));
+  if (hasFloat) parts.push(extraText(v.budget - sched.a2, 'masa floating'));
+  $('budget-help').textContent = parts.join(' ');
+  const under = (hasFix && v.budget < sched.a1) || (hasFloat && v.budget < sched.a2);
+  $('budget-help').style.color = under ? 'var(--danger)' : '';
+}
+function extraText(d, label) {
+  if (d > 0) return 'Ekstra ' + rp(d) + ' per bulan di ' + label + '.';
+  if (d === 0) return 'Pas dengan angsuran wajib di ' + label + ', belum ada ekstra.';
+  return 'Kurang ' + rp(-d) + ' dari angsuran wajib di ' + label + ', jadi tetap bayar angsuran wajib.';
+}
+
+function renderHero() {
+  const { v, res } = R, n = res.normal;
+  $('t-lump-label').textContent = lumpName(v.every);
+  $('heroLead').innerHTML = 'Bayar <strong>' + rp(v.budget) + '</strong> per bulan. Sebagai pembanding, pembayaran normal lunas dalam ' + dur(n.months) + ' dengan total bunga ' + short(n.totInt) + '.';
+  const col = (key, how, bigId) => {
+    const r = res[key], faster = n.months - r.months, saved = n.totInt - r.totInt - r.totPen;
+    const y = Math.floor(r.months / 12), mo = r.months % 12;
+    const big = (y ? y + '<small> tahun</small>' : '') + (y && mo ? ' ' : '') + (mo ? mo + '<small> bulan</small>' : '');
+    let sub;
+    if (faster <= 0) sub = 'Sama dengan pembayaran normal. Naikkan total bayar per bulan di atas angsuran wajib supaya ada uang untuk mengurangi pokok.';
+    else {
+      sub = 'Lunas sekitar <strong>' + esc(dateOf(r.months)) + '</strong>, lebih cepat <strong>' + dur(faster) + '</strong>. Total bunga ' + short(r.totInt) + ', hemat <strong class="good">' + short(saved) + '</strong>' + (r.totPen > 0 ? ' setelah dipotong penalti ' + short(r.totPen) : '') + '.';
+      if (key === 'lump' && r.leftover > 1000) sub += ' Sisa tabungan setelah lunas ' + short(r.leftover) + '.';
+    }
+    return '<h3 class="hero-name"><span class="sw" style="--c:' + SCEN[key].color + '"></span>' + esc(key === 'lump' ? lumpName(v.every) : SCEN[key].name) + '</h3>' +
+      '<p class="how">' + how + '</p>' +
+      '<p class="big" id="' + bigId + '">' + big + '</p>' +
+      '<div>' + stripHTML(r.months, v.tenor, SCEN[key].strip) + '<div class="strip-scale"><span>Tahun 1</span><span>Tahun ' + v.tenor + '</span></div></div>' +
+      '<p class="sub">' + sub + '</p>';
+  };
+  $('heroMonthly').innerHTML = col('monthly', 'Selisih di atas angsuran wajib langsung disetor ke pokok setiap bulan.', 'hero-big');
+  $('heroLump').innerHTML = col('lump', 'Selisihnya ditabung dulu, lalu disetor ke pokok setiap ' + v.every + ' bulan.', 'hero-big-lump');
+  const m = res.monthly, l = res.lump;
+  $('mbarText').innerHTML = 'Setiap Bulan: <strong>' + dur(m.months) + '</strong><br>Setiap ' + v.every + ' Bulan: <strong>' + dur(l.months) + '</strong>';
+}
+
+function renderScenTable() {
+  const { v, res } = R, n = res.normal;
+  $('cmpHint').textContent = 'Bayar ' + rp(v.budget) + ' per bulan';
+  $('totalNote').textContent = 'Total Pembayaran = harga properti ' + rp(v.price) + ' (DP ' + rp(v.dp) + ' + pokok pinjaman ' + rp(R.L.principal) + ') + total bunga + penalti.';
+  $('scenTable').innerHTML = ['normal', 'monthly', 'lump'].map(k => {
+    const r = res[k], s = SCEN[k];
+    const net = n.totInt - r.totInt - r.totPen;
+    return '<tr><td class="lead-cell"><span class="sw' + (s.dash ? ' dash' : '') + '" style="--c:' + s.color + '"></span><span class="scen-name">' + esc(k === 'lump' ? lumpName(v.every) : s.name) + '</span></td>' +
+      '<td data-l="Durasi Pelunasan">' + dur(r.months) + '</td><td data-l="Perkiraan Lunas">' + esc(dateOf(r.months)) + '</td>' +
+      '<td class="r" data-l="Total Bunga">' + rp(r.totInt) + '</td><td class="r" data-l="Penalti">' + (r.totPen ? rp(r.totPen) : '0') + '</td>' +
+      '<td class="r" data-l="Total Pembayaran">' + rp(v.dp + r.totPaid) + '</td>' +
+      '<td data-l="Hemat Berapa?" class="r' + (net > 0 ? ' good' : '') + '">' + (k === 'normal' ? 'Acuan' : rp(net)) + '</td></tr>';
+  }).join('');
+}
+
+/* Grafik sisa pinjaman (SVG) */
+function niceStep(max, ticks) {
+  const raw = max / ticks, p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const m = raw / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+}
+function axisMoney(n) {
+  if (n >= 1e9) return nf1.format(n / 1e9) + ' M';
+  if (n >= 1e6) return nf.format(n / 1e6) + ' jt';
+  return fmt(n);
+}
+function renderChart() {
+  const { L, res, sched, v } = R;
+  const el = $('chart');
+  const W = Math.max(300, el.clientWidth || 640);
+  const narrow = W < 520;
+  const H = narrow ? 240 : 300;
+  const ml = 52, mr = narrow ? 14 : 20, mt = 22, mb = 30;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const N = sched.n;
+  const step = niceStep(L.principal, narrow ? 3 : 4);
+  const ymax = Math.ceil(L.principal / step) * step;
+  const x = m => ml + (m / N) * iw, y = b => mt + ih - (b / ymax) * ih;
+
+  let g = '';
+  // arsiran masa fix
+  if (sched.F > 0) {
+    g += '<rect x="' + x(0) + '" y="' + mt + '" width="' + (x(sched.F) - x(0)) + '" height="' + ih + '" fill="var(--band)"/>';
+    g += '<text x="' + (x(0) + 6) + '" y="' + (mt - 7) + '">' + (narrow ? 'Fix ' : 'Masa bunga fix ') + nf1.format(v.fixRate) + '%</text>';
+    if (sched.F < N) g += '<text x="' + (x(sched.F) + 6) + '" y="' + (mt - 7) + '">Floating ' + nf1.format(v.floatRate) + '%</text>';
+  }
+  for (let t = 0; t <= ymax + 1; t += step) {
+    g += '<line x1="' + ml + '" x2="' + (W - mr) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)" stroke-width="1"/>';
+    g += '<text x="' + (ml - 8) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + axisMoney(t) + '</text>';
+  }
+  const ys = v.tenor <= 10 ? (narrow ? 2 : 1) : v.tenor <= 20 ? (narrow ? 5 : 3) : 5;
+  for (let yr = 0; yr <= v.tenor; yr += ys) {
+    const tx = x(yr * 12), anc = tx > W - mr - 30 ? 'end' : 'middle';
+    g += '<text x="' + (anc === 'end' ? W - 2 : tx) + '" y="' + (H - 8) + '" text-anchor="' + anc + '">' + (yr === 0 ? 'Awal' : 'Tahun ' + yr) + '</text>';
+  }
+  const path = r => 'M' + x(0) + ' ' + y(L.principal) + r.rows.map(row => ' L' + x(row.m).toFixed(1) + ' ' + y(row.balance).toFixed(1)).join('');
+  ['normal', 'lump', 'monthly'].forEach(k => {
+    const s = SCEN[k];
+    g += '<path d="' + path(res[k]) + '" fill="none" stroke="' + s.color + '" stroke-width="2" stroke-linejoin="round"' + (s.dash ? ' stroke-dasharray="5 4"' : '') + '/>';
+  });
+  // penanda lunas
+  const ends = ['monthly', 'lump'].map(k => ({ k, m: res[k].months })).filter(e => e.m < N).sort((a, b) => a.m - b.m);
+  let lastLabelX = -1e9, row = 0;
+  ends.forEach(e => {
+    const cx = x(e.m), cy = y(0);
+    g += '<circle cx="' + cx + '" cy="' + cy + '" r="5" fill="' + SCEN[e.k].color + '" stroke="var(--surface)" stroke-width="2"/>';
+    row = (cx - lastLabelX < 90) ? row + 1 : 0;
+    lastLabelX = cx;
+    const ly = cy - 8 - row * 16;
+    const right = cx < W - 130;
+    g += '<text class="lbl" x="' + (right ? cx + 10 : cx - 10) + '" y="' + ly + '" text-anchor="' + (right ? 'start' : 'end') + '">Lunas bulan ' + e.m + '</text>';
+  });
+  g += '<line id="cross" x1="0" x2="0" y1="' + mt + '" y2="' + (mt + ih) + '" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>';
+  g += '<rect id="hit" x="' + ml + '" y="' + mt + '" width="' + iw + '" height="' + ih + '" fill="transparent"/>';
+
+  el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Grafik sisa pinjaman per bulan untuk tiga skenario. Rincian angka ada di Tabel Angsuran.">' + g + '</svg><div class="tip" id="tip" hidden></div>';
+  $('legend').innerHTML = ['normal', 'monthly', 'lump'].map(k => '<span><span class="sw' + (SCEN[k].dash ? ' dash' : '') + '" style="--c:' + SCEN[k].color + '"></span>' + esc(k === 'lump' ? lumpName(v.every) : SCEN[k].name) + '</span>').join('');
+
+  const svg = el.querySelector('svg'), tip = $('tip'), cross = $('cross');
+  function move(ev) {
+    const rect = svg.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) * (W / rect.width);
+    const m = Math.max(1, Math.min(N, Math.round((px - ml) / iw * N)));
+    cross.setAttribute('x1', x(m)); cross.setAttribute('x2', x(m)); cross.setAttribute('visibility', 'visible');
+    const bal = k => { const rr = res[k].rows[m - 1]; return rr ? rr.balance : 0; };
+    tip.innerHTML = '<strong>Bulan ' + m + ' (' + esc(dateOf(m)) + ')</strong>' + ['normal', 'monthly', 'lump'].map(k => '<div><span><span class="sw' + (SCEN[k].dash ? ' dash' : '') + '" style="--c:' + SCEN[k].color + '"></span>' + (k === 'normal' ? 'Normal' : k === 'monthly' ? 'Setiap Bulan' : 'Setiap ' + v.every + ' Bulan') + '</span><span>' + short(bal(k)) + '</span></div>').join('');
+    tip.hidden = false;
+    const left = x(m) * (rect.width / W);
+    const tw = tip.offsetWidth;
+    tip.style.left = Math.max(0, Math.min(rect.width - tw, left + (left > rect.width / 2 ? -tw - 12 : 12))) + 'px';
+  }
+  function leave() { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); }
+  svg.addEventListener('pointermove', move);
+  svg.addEventListener('pointerdown', move);
+  svg.addEventListener('pointerleave', leave);
+}
+
+/* Hitung mundur */
+function renderTarget() {
+  const out = $('target-out');
+  const { L, plan, sched, v } = R;
+  const raw = $('targetYears').value.trim();
+  const ty = Number(raw.replace(',', '.'));
+  if (raw === '') { out.innerHTML = '<p class="msg">Isi target lama lunas dalam tahun, misalnya 7.</p>'; return; }
+  if (!(ty > 0)) { out.innerHTML = '<p class="msg error">Target harus lebih dari 0 tahun.</p>'; return; }
+  const tm = Math.round(ty * 12);
+  if (tm >= sched.n) { out.innerHTML = '<p class="msg">Target ' + nf1.format(ty) + ' tahun sama atau lebih lama dari tenor ' + v.tenor + ' tahun. Cukup bayar angsuran wajib.</p>'; return; }
+  if (tm < Math.max(1, plan.startMonth)) { out.innerHTML = '<p class="msg error">Target lebih cepat dari bulan mulai bayar ekstra (bulan ke-' + plan.startMonth + '). Ubah salah satunya.</p>'; return; }
+  const a = solveBudget(L, 'monthly', plan, tm), b = solveBudget(L, 'lump', plan, tm);
+  const block = (res, label, note) => {
+    if (!res) return '<div class="answer"><span class="k">' + label + '</span><span class="v">Tidak tercapai</span><span class="note">Coba target yang lebih panjang.</span></div>';
+    return '<div class="answer"><span class="k">' + label + '</span><span class="v">' + rp(res.budget) + '<span class="hint"> / bulan</span></span><button class="btn btn-accent" type="button" data-use="' + res.budget + '">Pakai Angka Ini</button><span class="note">' + note + '</span></div>';
+  };
+  out.innerHTML = '<p class="hint">Supaya lunas dalam ' + dur(tm) + ' (sekitar ' + esc(dateOf(tm)) + '), total yang perlu kamu bayar:</p>' +
+    block(a, 'Bayar Ekstra Setiap Bulan', 'Termasuk angsuran wajib.') +
+    block(b, lumpName(v.every), 'Bayar angsuran wajib, sisanya ditabung lalu disetor.');
+}
+
+/* Bandingkan nominal */
+function renderCompare() {
+  const { L, plan, res, v } = R, n = res.normal;
+  const body = $('cmpBody');
+  const active = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.idx : null;
+  const activeCaret = active != null ? document.activeElement.selectionStart : null;
+  $('cmpLumpHead').textContent = lumpName(v.every);
+  body.innerHTML = state.nominals.map((nom, i) => {
+    let a = '<span class="hint">Isi nominal</span>', b = a, net = '';
+    if (nom > 0) {
+      const ra = simulate(L, 'monthly', Object.assign({}, plan, { budget: nom }));
+      const rb = simulate(L, 'lump', Object.assign({}, plan, { budget: nom }));
+      a = '<div class="cellv"><div>' + dur(ra.months) + '</div>' + stripHTML(ra.months, v.tenor, SCEN.monthly.strip, true) + '</div>';
+      b = '<div class="cellv"><div>' + dur(rb.months) + '</div>' + stripHTML(rb.months, v.tenor, SCEN.lump.strip, true) + '</div>';
+      const nv = n.totInt - ra.totInt - ra.totPen;
+      net = '<span class="' + (nv > 0 ? 'good' : '') + '">' + (nv > 0 ? short(nv) : '0') + '</span>';
+    }
+    return '<tr><td class="lead-cell"><label class="sr" for="nom-' + i + '">Nominal ' + (i + 1) + '</label><div class="control"><span class="pre">Rp</span><input id="nom-' + i + '" type="text" inputmode="numeric" data-idx="' + i + '" value="' + (nom > 0 ? fmt(nom) : '') + '" autocomplete="off"></div></td>' +
+      '<td data-l="Bayar Ekstra Setiap Bulan">' + a + '</td><td data-l="' + esc(lumpName(v.every)) + '">' + b + '</td><td class="r" data-l="Hemat Berapa?">' + net + '</td>' +
+      '<td class="del"><button class="icon-btn" type="button" data-del="' + i + '" aria-label="Hapus nominal ' + (i + 1) + '"' + (state.nominals.length <= 1 ? ' disabled' : '') + '>&times;</button></td></tr>';
+  }).join('');
+  $('addNominal').disabled = state.nominals.length >= 5;
+  if (active != null) { const el = $('nom-' + active); if (el) { el.focus(); try { el.setSelectionRange(activeCaret, activeCaret); } catch (e) {} } }
+}
+
+/* Tabel angsuran per tahun */
+function renderYears() {
+  const r = R.res[state.tbl], L = R.L, v = R.v;
+  const isLump = state.tbl === 'lump', isNormal = state.tbl === 'normal';
+  const years = Math.ceil(r.rows.length / 12);
+  let h = '';
+  for (let y = 0; y < years; y++) {
+    const rows = r.rows.slice(y * 12, y * 12 + 12);
+    const last = rows[rows.length - 1];
+    const sum = f => rows.reduce((t, x) => t + x[f], 0);
+    const fix = rows[0].fix;
+    const chip = '<span class="chip' + (fix ? '' : ' float') + '">' + (fix ? 'Fix ' : 'Floating ') + nf1.format(rows[0].rate) + '%</span>';
+    const extraSum = sum('extra') + sum('pen');
+    h += '<details class="year" data-y="' + (y + 1) + '"' + (state.openYears.has(y + 1) ? ' open' : '') + '><summary><span class="y-title">Tahun ' + (y + 1) + ' ' + chip + '</span><span></span><span class="y-meta">' +
+      (extraSum > 0 ? 'Ekstra ' + short(sum('extra')) + ', ' : '') + 'sisa ' + short(last.balance) + '</span></summary>' +
+      '<div class="tablewrap"><table><thead><tr><th>Bulan</th><th class="r">Angsuran</th><th class="r">Porsi Pokok</th><th class="r">Porsi Bunga</th>' +
+      (isNormal ? '' : '<th class="r">Extra Payment</th><th class="r">Penalti</th>') + (isLump ? '<th class="r">Tabungan</th>' : '') + '<th class="r">Sisa Pinjaman</th></tr></thead><tbody>' +
+      rows.map(x => '<tr><td>' + x.m + ' <span class="hint">' + esc(dateOf(x.m)) + '</span></td><td class="r">' + fmt(x.pay) + '</td><td class="r">' + fmt(x.principal) + '</td><td class="r">' + fmt(x.interest) + '</td>' +
+        (isNormal ? '' : '<td class="r' + (x.extra > 0 ? ' extra' : '') + '">' + (x.extra > 0 ? fmt(x.extra) : '0') + '</td><td class="r">' + (x.pen > 0 ? fmt(x.pen) : '0') + '</td>') +
+        (isLump ? '<td class="r">' + fmt(x.saved) + '</td>' : '') + '<td class="r">' + fmt(x.balance) + '</td></tr>').join('') +
+      '<tr class="sub"><td>Subtotal</td><td class="r">' + fmt(sum('pay')) + '</td><td class="r">' + fmt(sum('principal')) + '</td><td class="r">' + fmt(sum('interest')) + '</td>' +
+      (isNormal ? '' : '<td class="r">' + fmt(sum('extra')) + '</td><td class="r">' + fmt(sum('pen')) + '</td>') + (isLump ? '<td></td>' : '') + '<td></td></tr>' +
+      '</tbody></table></div></details>';
+  }
+  $('yearTables').innerHTML = h;
+}
+
+/* ---------- Status hitung (debounce) ---------- */
+let timer = null;
+function schedule() {
+  const st = $('status');
+  st.dataset.busy = 'true'; st.textContent = 'Menghitung ulang...';
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    compute();
+    st.dataset.busy = 'false';
+    st.textContent = R ? 'Hasil sudah diperbarui.' : '';
+  }, 220);
+}
+
+/* ---------- Tema ---------- */
+function effectiveDark() {
+  const t = document.documentElement.getAttribute('data-theme');
+  if (t) return t === 'dark';
+  return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function syncThemeBtn() {
+  const dark = effectiveDark();
+  $('themeText').textContent = dark ? 'Mode Terang' : 'Mode Gelap';
+  $('themeBtn').setAttribute('aria-pressed', String(dark));
+}
+
+/* ---------- Event ---------- */
+document.querySelectorAll('input[data-money]').forEach(el => el.addEventListener('input', () => liveMoney(el)));
+$('form').addEventListener('input', schedule);
+$('form').addEventListener('change', schedule);
+$('form').addEventListener('submit', e => e.preventDefault());
+$('targetYears').addEventListener('input', () => { if (R) renderTarget(); });
+
+document.querySelectorAll('input[name="tbl"]').forEach(r => r.addEventListener('change', () => {
+  state.tbl = r.value; if (R) renderYears();
+}));
+
+$('target-out').addEventListener('click', e => {
+  const b = e.target.closest('[data-use]'); if (!b) return;
+  $('budget').value = fmt(Number(b.dataset.use));
+  compute();
+  $('status').textContent = 'Total bayar per bulan diganti ke ' + rp(Number(b.dataset.use)) + '.';
+  document.querySelector('.hero').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+});
+
+$('cmpBody').addEventListener('input', e => {
+  const el = e.target; if (el.dataset.idx == null) return;
+  liveMoney(el);
+  state.nominals[+el.dataset.idx] = parseMoney(el.value) || 0;
+  clearTimeout(el._t); el._t = setTimeout(() => { if (R) renderCompare(); }, 300);
+});
+$('cmpBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if (!b || b.disabled) return;
+  state.nominals.splice(+b.dataset.del, 1);
+  renderCompare();
+  const f = $('nom-0'); if (f) f.focus();
+});
+$('addNominal').addEventListener('click', () => {
+  if (state.nominals.length >= 5) return;
+  const last = state.nominals[state.nominals.length - 1] || (R ? R.v.budget : 5000000);
+  state.nominals.push(last + 1000000);
+  renderCompare();
+  const el = $('nom-' + (state.nominals.length - 1)); if (el) el.focus();
+});
+
+$('yearTables').addEventListener('toggle', e => {
+  const d = e.target; if (!d.dataset || !d.dataset.y) return;
+  if (d.open) state.openYears.add(+d.dataset.y); else state.openYears.delete(+d.dataset.y);
+}, true);
+$('expandAll').addEventListener('click', () => { document.querySelectorAll('details.year').forEach(d => { d.open = true; state.openYears.add(+d.dataset.y); }); });
+$('collapseAll').addEventListener('click', () => { document.querySelectorAll('details.year').forEach(d => { d.open = false; }); state.openYears.clear(); });
+
+$('startDate').addEventListener('click', () => { if ($('pickerPop').hidden) openPicker(); else closePicker(false); });
+$('popPrev').addEventListener('click', () => { picker.pageStart -= 12; renderPicker(); });
+$('popNext').addEventListener('click', () => { picker.pageStart += 12; renderPicker(); });
+$('popBack').addEventListener('click', () => {
+  picker.view = 'year'; picker.pageStart = picker.year - 4; renderPicker();
+  const b = $('popGrid').querySelector('[data-year="' + picker.year + '"]'); if (b) b.focus();
+});
+$('popGrid').addEventListener('click', e => {
+  const yb = e.target.closest('[data-year]'), mb = e.target.closest('[data-month]');
+  if (yb) {
+    picker.year = +yb.dataset.year; picker.view = 'month'; renderPicker();
+    const f = $('popGrid').querySelector('[aria-current="true"]') || $('popGrid').querySelector('button'); if (f) f.focus();
+  } else if (mb) {
+    state.startDate = { y: picker.year, m: +mb.dataset.month };
+    syncPickerText(); closePicker(true); schedule();
+  }
+});
+$('pickerPop').addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); closePicker(true); } });
+document.addEventListener('pointerdown', e => { if (!$('pickerPop').hidden && !e.target.closest('.picker-anchor')) closePicker(false); });
+document.addEventListener('focusin', e => { if (!$('pickerPop').hidden && !e.target.closest('.picker-anchor')) closePicker(false); });
+
+$('themeBtn').addEventListener('click', () => {
+  document.documentElement.setAttribute('data-theme', effectiveDark() ? 'light' : 'dark');
+  syncThemeBtn();
+});
+if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncThemeBtn);
+new MutationObserver(syncThemeBtn).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+$('mbarLink').addEventListener('click', e => {
+  e.preventDefault();
+  $('hasil').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  $('hasil').focus({ preventScroll: true });
+});
+if ('IntersectionObserver' in window) {
+  new IntersectionObserver(ents => ents.forEach(en => { $('mbar').hidden = en.isIntersecting; }), { threshold: 0 }).observe($('resultBody'));
+}
+
+let rw = null;
+window.addEventListener('resize', () => { clearTimeout(rw); rw = setTimeout(() => { if (R) renderChart(); }, 120); });
+
+if (!document.documentElement.getAttribute('data-theme')) document.documentElement.setAttribute('data-theme', 'light');
+(function () {
+  try {
+    if (!document.head.querySelector('link[rel="icon"]')) {
+      const l = document.querySelector('link[rel="icon"]');
+      if (l) document.head.appendChild(l.cloneNode());
+    }
+  } catch (e) {}
+})();
+fillDefaults();
+syncThemeBtn();
+compute();
+</script>
+
+</body></html>
