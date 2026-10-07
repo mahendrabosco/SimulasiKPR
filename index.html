@@ -1,4 +1,8 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Simulasi Pelunasan KPR</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='6' y='3' width='20' height='26' rx='4' fill='%23b0cfff' stroke='%2324253a' stroke-width='2'/%3E%3Crect x='10' y='7' width='12' height='6' rx='1.5' fill='%23e0609c'/%3E%3Cg fill='%2324253a'%3E%3Ccircle cx='11.5' cy='18' r='1.6'/%3E%3Ccircle cx='16' cy='18' r='1.6'/%3E%3Ccircle cx='20.5' cy='18' r='1.6'/%3E%3Ccircle cx='11.5' cy='23.5' r='1.6'/%3E%3Ccircle cx='16' cy='23.5' r='1.6'/%3E%3Ccircle cx='20.5' cy='23.5' r='1.6'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -128,7 +132,9 @@ p { margin: 0; }
 .fields { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .field { display: grid; gap: 4px; min-width: 0; align-content: start; }
 .field.full { grid-column: 1 / -1; }
-.field label { font-size: 13px; font-weight: 600; }
+.field label, .field-label { font-size: 13px; font-weight: 600; }
+.seg-full { display: flex; margin-bottom: 4px; }
+.seg-full label { flex: 1 1 auto; justify-content: center; text-align: center; }
 .field .help { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
 .help-row { grid-column: 1 / -1; margin-top: -8px; font-size: 12.5px; color: var(--muted); line-height: 1.4; }
 .field .err { font-size: 12.5px; color: var(--danger); line-height: 1.4; }
@@ -302,7 +308,9 @@ td.extra { color: var(--pink-ink); font-weight: 600; }
 }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
-
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
 <div class="wrap">
   <header class="top">
     <h1>Simulasi Pelunasan KPR</h1>
@@ -371,6 +379,11 @@ td.extra { color: var(--pink-ink); font-weight: 600; }
             </div>
             </div>
           </div>
+          <div class="field full">
+            <label for="other">Biaya Lain-Lain</label>
+            <div class="control"><span class="pre">Rp</span><input id="other" type="text" inputmode="numeric" data-money autocomplete="off" aria-describedby="other-help"></div>
+            <p class="help" id="other-help">Misalnya provisi, notaris, BPHTB, atau asuransi. Isi totalnya, atau kosongkan kalau tidak ada.</p>
+          </div>
         </div>
         <dl class="readout" id="loanReadout"></dl>
       </section>
@@ -385,10 +398,9 @@ td.extra { color: var(--pink-ink); font-weight: 600; }
             <p class="err" id="budget-err" hidden></p>
           </div>
           <div class="field">
-            <label for="startMonth">Mulai Bayar Ekstra Di Bulan Ke</label>
-            <div class="control"><input id="startMonth" type="number" inputmode="numeric" min="1" step="1" aria-describedby="startMonth-help startMonth-err"></div>
-            <p class="help" id="startMonth-help">Isi 1 kalau mulai dari cicilan pertama.</p>
-            <p class="err" id="startMonth-err" hidden></p>
+            <label for="startYear">Mulai Bayar Ekstra</label>
+            <select id="startYear" aria-describedby="startYear-help"></select>
+            <p class="help" id="startYear-help">Dihitung sejak cicilan pertama.</p>
           </div>
           <div class="field">
             <label for="penalty">Penalti Pelunasan</label>
@@ -397,13 +409,26 @@ td.extra { color: var(--pink-ink); font-weight: 600; }
             <p class="err" id="penalty-err" hidden></p>
           </div>
           <div class="field full">
-            <label for="every">Periode Bayar Ekstra</label>
-            <select id="every">
+            <p class="field-label" id="lumpBy-label">Periode Bayar Ekstra</p>
+            <div class="seg seg-full" role="radiogroup" aria-labelledby="lumpBy-label">
+              <input type="radio" name="lumpBy" id="by-period" value="period" checked><label for="by-period">Per Beberapa Bulan</label>
+              <input type="radio" name="lumpBy" id="by-multiple" value="multiple"><label for="by-multiple">Per Kelipatan Angsuran</label>
+            </div>
+            <select id="every" aria-label="Jarak bayar ekstra dalam bulan" aria-describedby="lumpBy-help">
               <option value="3">Setiap 3 Bulan</option>
               <option value="6">Setiap 6 Bulan</option>
               <option value="12">Setiap 12 Bulan</option>
               <option value="24">Setiap 24 Bulan</option>
             </select>
+            <select id="multiple" aria-label="Kelipatan angsuran untuk bayar ekstra" aria-describedby="lumpBy-help" hidden>
+              <option value="1">Setiap Terkumpul 1x Angsuran</option>
+              <option value="2">Setiap Terkumpul 2x Angsuran</option>
+              <option value="3">Setiap Terkumpul 3x Angsuran</option>
+              <option value="4">Setiap Terkumpul 4x Angsuran</option>
+              <option value="6">Setiap Terkumpul 6x Angsuran</option>
+              <option value="12">Setiap Terkumpul 12x Angsuran</option>
+            </select>
+            <p class="help" id="lumpBy-help"></p>
           </div>
         </div>
       </section>
@@ -540,7 +565,12 @@ function simulate(L, mode, plan) {
       } else {
         saved += spare;
         const sinceStart = m - start + 1;
-        if (saved >= b * (1 + p) || sinceStart % every === 0) extra = Math.min(saved / (1 + p), b);
+        if (saved >= b * (1 + p)) extra = b;
+        else if (plan.by === 'multiple') {
+          const chunk = (plan.multiple || 3) * wajib;
+          const n = Math.floor(saved / (chunk * (1 + p)));
+          if (n > 0) extra = Math.min(n * chunk, b);
+        } else if (sinceStart % every === 0) extra = Math.min(saved / (1 + p), b);
       }
       if (extra > 0) {
         pen = extra * p;
@@ -597,7 +627,7 @@ const parseDec = s => { const t = (s || '').trim().replace(',', '.'); return t =
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /* ---------- State ---------- */
-const DEFAULTS = { price: 400000000, dpPct: 10, tenor: 15, fixYears: 5, fixRate: 3.4, floatRate: 12, budget: 5000000, startMonth: 1, penalty: 0, every: 12, targetYears: 7, nominals: [4000000, 5000000, 6000000] };
+const DEFAULTS = { price: 400000000, dpPct: 10, tenor: 15, fixYears: 5, fixRate: 3.4, floatRate: 12, budget: 5000000, startYear: 0, penalty: 0, every: 12, by: 'period', multiple: 3, other: 0, targetYears: 7, nominals: [4000000, 5000000, 6000000] };
 const state = { focus: 'monthly', tbl: 'monthly', openYears: new Set(), nominals: DEFAULTS.nominals.slice(), startDate: null };
 const $ = id => document.getElementById(id);
 
@@ -654,7 +684,10 @@ function fillDefaults() {
   $('fixRate').value = String(DEFAULTS.fixRate).replace('.', ',');
   $('floatRate').value = String(DEFAULTS.floatRate).replace('.', ',');
   $('budget').value = fmt(DEFAULTS.budget);
-  $('startMonth').value = DEFAULTS.startMonth;
+  buildStartYears(DEFAULTS.tenor, DEFAULTS.startYear);
+  $('other').value = '';
+  $('multiple').value = String(DEFAULTS.multiple);
+  $('by-period').checked = true;
   $('penalty').value = String(DEFAULTS.penalty);
   $('every').value = String(DEFAULTS.every);
   $('targetYears').value = DEFAULTS.targetYears;
@@ -686,8 +719,10 @@ function readInputs() {
     price: parseMoney($('price').value), dpPct: parseDec($('dp').value),
     tenor: Number($('tenor').value), fixYears: Number($('fixYears').value),
     fixRate: parseDec($('fixRate').value), floatRate: parseDec($('floatRate').value),
-    budget: parseMoney($('budget').value), startMonth: Number($('startMonth').value),
-    penalty: parseDec($('penalty').value), every: Number($('every').value)
+    budget: parseMoney($('budget').value), startYear: Number($('startYear').value) || 0,
+    penalty: parseDec($('penalty').value), every: Number($('every').value),
+    by: document.querySelector('input[name="lumpBy"]:checked').value, multiple: Number($('multiple').value),
+    other: parseMoney($('other').value) || 0
   };
 
   const required = ['price', 'dp', 'tenor', 'fixYears', 'fixRate', 'floatRate', 'budget'];
@@ -702,10 +737,12 @@ function readInputs() {
   if (!blank.includes('fixRate') && !(v.fixRate >= 0 && v.fixRate <= 30)) errs.fixRate = 'Isi 0 sampai 30.';
   if (!blank.includes('floatRate') && !(v.floatRate >= 0 && v.floatRate <= 30)) errs.floatRate = 'Isi 0 sampai 30.';
   if (!blank.includes('budget') && !(v.budget > 0)) errs.budget = 'Isi nominal lebih dari 0.';
-  if ($('startMonth').value.trim() !== '' && !(Number.isInteger(v.startMonth) && v.startMonth >= 1 && (!(v.tenor > 0) || v.startMonth <= v.tenor * 12))) errs.startMonth = 'Isi bulan ke-1 sampai akhir tenor.';
   if ($('penalty').value.trim() !== '' && !(v.penalty >= 0 && v.penalty <= 20)) errs.penalty = 'Isi 0 sampai 20.';
-  ['price', 'dp', 'tenor', 'fixYears', 'fixRate', 'floatRate', 'budget', 'startMonth', 'penalty'].forEach(k => setErr(k, errs[k]));
-  if ($('startMonth').value.trim() === '') v.startMonth = 1;
+  ['price', 'dp', 'tenor', 'fixYears', 'fixRate', 'floatRate', 'budget', 'penalty'].forEach(k => setErr(k, errs[k]));
+  v.startMonth = v.startYear * 12 + 1;
+  if (Number.isInteger(v.tenor) && v.tenor >= 1) buildStartYears(v.tenor, v.startYear);
+  $('every').hidden = v.by !== 'period';
+  $('multiple').hidden = v.by !== 'multiple';
   if ($('penalty').value.trim() === '') v.penalty = 0;
   return { v, blank, errs };
 }
@@ -716,7 +753,18 @@ const SCEN = {
   monthly: { name: 'Bayar Ekstra Setiap Bulan', color: 'var(--c-month)', strip: 'var(--c-month)' },
   lump: { name: 'Setor Berkala', color: 'var(--c-lump)', strip: 'var(--c-lump)' }
 };
-function lumpName(every) { return 'Bayar Ekstra Setiap ' + every + ' Bulan'; }
+function lumpShort(plan) { return plan.by === 'multiple' ? 'Setiap ' + plan.multiple + 'x Angsuran' : 'Setiap ' + plan.every + ' Bulan'; }
+function lumpName(plan) { return 'Bayar Ekstra ' + lumpShort(plan); }
+function buildStartYears(tenor, keep) {
+  const sel = $('startYear');
+  const want = Math.min(keep || 0, tenor - 1);
+  if (sel.options.length !== tenor) {
+    let h = '<option value="0">Sejak Awal</option>';
+    for (let y = 1; y < tenor; y++) h += '<option value="' + y + '">Setelah ' + y + ' Tahun</option>';
+    sel.innerHTML = h;
+  }
+  sel.value = String(want);
+}
 
 function stripHTML(months, tenor, color, sm) {
   let h = '';
@@ -747,14 +795,14 @@ function compute() {
   box.hidden = true; body.hidden = false;
 
   const L = { principal: v.price - v.dp, tenor: v.tenor, fixYears: v.fixYears, fixRate: v.fixRate, floatRate: v.floatRate };
-  const plan = { budget: v.budget, startMonth: v.startMonth, penalty: v.penalty, every: v.every };
+  const plan = { budget: v.budget, startMonth: v.startMonth, startYear: v.startYear, penalty: v.penalty, every: v.every, by: v.by, multiple: v.multiple };
   const res = { normal: simulate(L, 'normal'), monthly: simulate(L, 'monthly', plan), lump: simulate(L, 'lump', plan) };
   R = { v, L, plan, res, sched: res.normal.sched };
 
   renderReadout(); renderBudgetHelp(); renderHero(); renderScenTable(); renderChart(); renderTarget(); renderCompare(); renderYears();
 }
 function labelOf(k) {
-  return ({ price: 'Harga Properti', dp: 'Uang Muka', tenor: 'Tenor', fixYears: 'Masa Bunga Fix', fixRate: 'Bunga Fix', floatRate: 'Bunga Floating', budget: 'Total Bayar Per Bulan', startMonth: 'Mulai Bayar Ekstra', penalty: 'Penalti Pelunasan' })[k];
+  return ({ price: 'Harga Properti', dp: 'Uang Muka', tenor: 'Tenor', fixYears: 'Masa Bunga Fix', fixRate: 'Bunga Fix', floatRate: 'Bunga Floating', budget: 'Total Bayar Per Bulan', penalty: 'Penalti Pelunasan' })[k];
 }
 
 function renderReadout() {
@@ -765,6 +813,7 @@ function renderReadout() {
     '<div><dt>Pokok Pinjaman</dt><dd>' + rp(L.principal) + '</dd></div>' +
     '<div><dt>Angsuran Masa Fix' + (sched.F ? ' (Tahun ke-1 sampai ' + v.fixYears + ')' : '') + '</dt><dd>' + (sched.F ? rp(sched.a1) : 'tidak ada') + '</dd></div>' +
     (hasFloat ? '<div><dt>Angsuran Masa Floating</dt><dd>' + rp(sched.a2) + '</dd></div>' : '') +
+    (v.other > 0 ? '<div><dt>Biaya Lain-Lain</dt><dd>' + rp(v.other) + '</dd></div>' : '') +
     '<div><dt>Pembayaran Pertama (DP + Angsuran Pertama)</dt><dd>' + rp(v.dp + (sched.F ? sched.a1 : sched.a2)) + '</dd></div>';
 }
 
@@ -777,6 +826,10 @@ function renderBudgetHelp() {
   $('budget-help').textContent = parts.join(' ');
   const under = (hasFix && v.budget < sched.a1) || (hasFloat && v.budget < sched.a2);
   $('budget-help').style.color = under ? 'var(--danger)' : '';
+  const k = R.plan.multiple;
+  $('lumpBy-help').textContent = R.plan.by === 'multiple'
+    ? 'Setor ke pokok setiap tabungan mencapai ' + (hasFix ? rp(k * Math.round(sched.a1)) + ' di masa fix' : '') + (hasFix && hasFloat ? ' atau ' : '') + (hasFloat ? rp(k * Math.round(sched.a2)) + ' di masa floating' : '') + '.'
+    : 'Selisih dari angsuran wajib ditabung, lalu disetor ke pokok setiap ' + v.every + ' bulan.';
 }
 function extraText(d, label) {
   if (d > 0) return 'Ekstra ' + rp(d) + ' per bulan di ' + label + '.';
@@ -786,7 +839,7 @@ function extraText(d, label) {
 
 function renderHero() {
   const { v, res } = R, n = res.normal;
-  $('t-lump-label').textContent = lumpName(v.every);
+  $('t-lump-label').textContent = lumpName(R.plan);
   $('heroLead').innerHTML = 'Bayar <strong>' + rp(v.budget) + '</strong> per bulan. Sebagai pembanding, pembayaran normal lunas dalam ' + dur(n.months) + ' dengan total bunga ' + short(n.totInt) + '.';
   const col = (key, how, bigId) => {
     const r = res[key], faster = n.months - r.months, saved = n.totInt - r.totInt - r.totPen;
@@ -798,29 +851,33 @@ function renderHero() {
       sub = 'Lunas sekitar <strong>' + esc(dateOf(r.months)) + '</strong>, lebih cepat <strong>' + dur(faster) + '</strong>. Total bunga ' + short(r.totInt) + ', hemat <strong class="good">' + short(saved) + '</strong>' + (r.totPen > 0 ? ' setelah dipotong penalti ' + short(r.totPen) : '') + '.';
       if (key === 'lump' && r.leftover > 1000) sub += ' Sisa tabungan setelah lunas ' + short(r.leftover) + '.';
     }
-    return '<h3 class="hero-name"><span class="sw" style="--c:' + SCEN[key].color + '"></span>' + esc(key === 'lump' ? lumpName(v.every) : SCEN[key].name) + '</h3>' +
+    return '<h3 class="hero-name"><span class="sw" style="--c:' + SCEN[key].color + '"></span>' + esc(key === 'lump' ? lumpName(R.plan) : SCEN[key].name) + '</h3>' +
       '<p class="how">' + how + '</p>' +
       '<p class="big" id="' + bigId + '">' + big + '</p>' +
       '<div>' + stripHTML(r.months, v.tenor, SCEN[key].strip) + '<div class="strip-scale"><span>Tahun 1</span><span>Tahun ' + v.tenor + '</span></div></div>' +
       '<p class="sub">' + sub + '</p>';
   };
-  $('heroMonthly').innerHTML = col('monthly', 'Selisih di atas angsuran wajib langsung disetor ke pokok setiap bulan.', 'hero-big');
-  $('heroLump').innerHTML = col('lump', 'Selisihnya ditabung dulu, lalu disetor ke pokok setiap ' + v.every + ' bulan.', 'hero-big-lump');
+  const startTxt = R.plan.startYear > 0 ? ' Mulai setelah ' + R.plan.startYear + ' tahun.' : '';
+  $('heroMonthly').innerHTML = col('monthly', 'Selisih di atas angsuran wajib langsung disetor ke pokok setiap bulan.' + startTxt, 'hero-big');
+  const lumpHow = R.plan.by === 'multiple'
+    ? 'Selisihnya ditabung dulu, lalu disetor ke pokok setiap terkumpul ' + R.plan.multiple + 'x angsuran wajib.' + startTxt
+    : 'Selisihnya ditabung dulu, lalu disetor ke pokok setiap ' + v.every + ' bulan.' + startTxt;
+  $('heroLump').innerHTML = col('lump', lumpHow, 'hero-big-lump');
   const m = res.monthly, l = res.lump;
-  $('mbarText').innerHTML = 'Setiap Bulan: <strong>' + dur(m.months) + '</strong><br>Setiap ' + v.every + ' Bulan: <strong>' + dur(l.months) + '</strong>';
+  $('mbarText').innerHTML = 'Setiap Bulan: <strong>' + dur(m.months) + '</strong><br>' + lumpShort(R.plan) + ': <strong>' + dur(l.months) + '</strong>';
 }
 
 function renderScenTable() {
   const { v, res } = R, n = res.normal;
   $('cmpHint').textContent = 'Bayar ' + rp(v.budget) + ' per bulan';
-  $('totalNote').textContent = 'Total Pembayaran = harga properti ' + rp(v.price) + ' (DP ' + rp(v.dp) + ' + pokok pinjaman ' + rp(R.L.principal) + ') + total bunga + penalti.';
+  $('totalNote').textContent = 'Total Pembayaran = harga properti ' + rp(v.price) + ' (DP ' + rp(v.dp) + ' + pokok pinjaman ' + rp(R.L.principal) + ')' + (v.other > 0 ? ' + biaya lain-lain ' + rp(v.other) : '') + ' + total bunga + penalti.';
   $('scenTable').innerHTML = ['normal', 'monthly', 'lump'].map(k => {
     const r = res[k], s = SCEN[k];
     const net = n.totInt - r.totInt - r.totPen;
-    return '<tr><td class="lead-cell"><span class="sw' + (s.dash ? ' dash' : '') + '" style="--c:' + s.color + '"></span><span class="scen-name">' + esc(k === 'lump' ? lumpName(v.every) : s.name) + '</span></td>' +
+    return '<tr><td class="lead-cell"><span class="sw' + (s.dash ? ' dash' : '') + '" style="--c:' + s.color + '"></span><span class="scen-name">' + esc(k === 'lump' ? lumpName(R.plan) : s.name) + '</span></td>' +
       '<td data-l="Durasi Pelunasan">' + dur(r.months) + '</td><td data-l="Perkiraan Lunas">' + esc(dateOf(r.months)) + '</td>' +
       '<td class="r" data-l="Total Bunga">' + rp(r.totInt) + '</td><td class="r" data-l="Penalti">' + (r.totPen ? rp(r.totPen) : '0') + '</td>' +
-      '<td class="r" data-l="Total Pembayaran">' + rp(v.dp + r.totPaid) + '</td>' +
+      '<td class="r" data-l="Total Pembayaran">' + rp(v.dp + r.totPaid + v.other) + '</td>' +
       '<td data-l="Hemat Berapa?" class="r' + (net > 0 ? ' good' : '') + '">' + (k === 'normal' ? 'Acuan' : rp(net)) + '</td></tr>';
   }).join('');
 }
@@ -886,7 +943,7 @@ function renderChart() {
   g += '<rect id="hit" x="' + ml + '" y="' + mt + '" width="' + iw + '" height="' + ih + '" fill="transparent"/>';
 
   el.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Grafik sisa pinjaman per bulan untuk tiga skenario. Rincian angka ada di Tabel Angsuran.">' + g + '</svg><div class="tip" id="tip" hidden></div>';
-  $('legend').innerHTML = ['normal', 'monthly', 'lump'].map(k => '<span><span class="sw' + (SCEN[k].dash ? ' dash' : '') + '" style="--c:' + SCEN[k].color + '"></span>' + esc(k === 'lump' ? lumpName(v.every) : SCEN[k].name) + '</span>').join('');
+  $('legend').innerHTML = ['normal', 'monthly', 'lump'].map(k => '<span><span class="sw' + (SCEN[k].dash ? ' dash' : '') + '" style="--c:' + SCEN[k].color + '"></span>' + esc(k === 'lump' ? lumpName(R.plan) : SCEN[k].name) + '</span>').join('');
 
   const svg = el.querySelector('svg'), tip = $('tip'), cross = $('cross');
   function move(ev) {
@@ -895,7 +952,7 @@ function renderChart() {
     const m = Math.max(1, Math.min(N, Math.round((px - ml) / iw * N)));
     cross.setAttribute('x1', x(m)); cross.setAttribute('x2', x(m)); cross.setAttribute('visibility', 'visible');
     const bal = k => { const rr = res[k].rows[m - 1]; return rr ? rr.balance : 0; };
-    tip.innerHTML = '<strong>Bulan ' + m + ' (' + esc(dateOf(m)) + ')</strong>' + ['normal', 'monthly', 'lump'].map(k => '<div><span><span class="sw' + (SCEN[k].dash ? ' dash' : '') + '" style="--c:' + SCEN[k].color + '"></span>' + (k === 'normal' ? 'Normal' : k === 'monthly' ? 'Setiap Bulan' : 'Setiap ' + v.every + ' Bulan') + '</span><span>' + short(bal(k)) + '</span></div>').join('');
+    tip.innerHTML = '<strong>Bulan ' + m + ' (' + esc(dateOf(m)) + ')</strong>' + ['normal', 'monthly', 'lump'].map(k => '<div><span><span class="sw' + (SCEN[k].dash ? ' dash' : '') + '" style="--c:' + SCEN[k].color + '"></span>' + (k === 'normal' ? 'Normal' : k === 'monthly' ? 'Setiap Bulan' : lumpShort(R.plan)) + '</span><span>' + short(bal(k)) + '</span></div>').join('');
     tip.hidden = false;
     const left = x(m) * (rect.width / W);
     const tw = tip.offsetWidth;
@@ -917,7 +974,7 @@ function renderTarget() {
   if (!(ty > 0)) { out.innerHTML = '<p class="msg error">Target harus lebih dari 0 tahun.</p>'; return; }
   const tm = Math.round(ty * 12);
   if (tm >= sched.n) { out.innerHTML = '<p class="msg">Target ' + nf1.format(ty) + ' tahun sama atau lebih lama dari tenor ' + v.tenor + ' tahun. Cukup bayar angsuran wajib.</p>'; return; }
-  if (tm < Math.max(1, plan.startMonth)) { out.innerHTML = '<p class="msg error">Target lebih cepat dari bulan mulai bayar ekstra (bulan ke-' + plan.startMonth + '). Ubah salah satunya.</p>'; return; }
+  if (tm < plan.startMonth) { out.innerHTML = '<p class="msg error">Target lebih cepat dari waktu mulai bayar ekstra (setelah ' + plan.startYear + ' tahun). Ubah salah satunya.</p>'; return; }
   const a = solveBudget(L, 'monthly', plan, tm), b = solveBudget(L, 'lump', plan, tm);
   const block = (res, label, note) => {
     if (!res) return '<div class="answer"><span class="k">' + label + '</span><span class="v">Tidak tercapai</span><span class="note">Coba target yang lebih panjang.</span></div>';
@@ -925,7 +982,7 @@ function renderTarget() {
   };
   out.innerHTML = '<p class="hint">Supaya lunas dalam ' + dur(tm) + ' (sekitar ' + esc(dateOf(tm)) + '), total yang perlu kamu bayar:</p>' +
     block(a, 'Bayar Ekstra Setiap Bulan', 'Termasuk angsuran wajib.') +
-    block(b, lumpName(v.every), 'Bayar angsuran wajib, sisanya ditabung lalu disetor.');
+    block(b, lumpName(R.plan), 'Bayar angsuran wajib, sisanya ditabung lalu disetor.');
 }
 
 /* Bandingkan nominal */
@@ -934,7 +991,7 @@ function renderCompare() {
   const body = $('cmpBody');
   const active = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.idx : null;
   const activeCaret = active != null ? document.activeElement.selectionStart : null;
-  $('cmpLumpHead').textContent = lumpName(v.every);
+  $('cmpLumpHead').textContent = lumpName(R.plan);
   body.innerHTML = state.nominals.map((nom, i) => {
     let a = '<span class="hint">Isi nominal</span>', b = a, net = '';
     if (nom > 0) {
@@ -946,7 +1003,7 @@ function renderCompare() {
       net = '<span class="' + (nv > 0 ? 'good' : '') + '">' + (nv > 0 ? short(nv) : '0') + '</span>';
     }
     return '<tr><td class="lead-cell"><label class="sr" for="nom-' + i + '">Nominal ' + (i + 1) + '</label><div class="control"><span class="pre">Rp</span><input id="nom-' + i + '" type="text" inputmode="numeric" data-idx="' + i + '" value="' + (nom > 0 ? fmt(nom) : '') + '" autocomplete="off"></div></td>' +
-      '<td data-l="Bayar Ekstra Setiap Bulan">' + a + '</td><td data-l="' + esc(lumpName(v.every)) + '">' + b + '</td><td class="r" data-l="Hemat Berapa?">' + net + '</td>' +
+      '<td data-l="Bayar Ekstra Setiap Bulan">' + a + '</td><td data-l="' + esc(lumpName(R.plan)) + '">' + b + '</td><td class="r" data-l="Hemat Berapa?">' + net + '</td>' +
       '<td class="del"><button class="icon-btn" type="button" data-del="' + i + '" aria-label="Hapus nominal ' + (i + 1) + '"' + (state.nominals.length <= 1 ? ' disabled' : '') + '>&times;</button></td></tr>';
   }).join('');
   $('addNominal').disabled = state.nominals.length >= 5;
@@ -1104,5 +1161,5 @@ fillDefaults();
 syncThemeBtn();
 compute();
 </script>
-
-</body></html>
+</body>
+</html>
